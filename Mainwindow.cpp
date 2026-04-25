@@ -166,11 +166,11 @@ void MainWindow::setupMenuBar() {
 
     // Archivo
     QMenu *fileMenu = mb->addMenu("&Archivo");
-    fileMenu->addAction(QIcon(), "&Nuevo",  this, &MainWindow::onNew,  QKeySequence::New);
-    fileMenu->addAction(QIcon(), "&Abrir…", this, &MainWindow::onLoad, QKeySequence::Open);
-    fileMenu->addAction(QIcon(), "&Guardar…",this,&MainWindow::onSave, QKeySequence::Save);
+    fileMenu->addAction(QIcon(), "&Nuevo",   QKeySequence::New,  this, &MainWindow::onNew);
+    fileMenu->addAction(QIcon(), "&Abrir…",  QKeySequence::Open, this, &MainWindow::onLoad);
+    fileMenu->addAction(QIcon(), "&Guardar…",QKeySequence::Save, this, &MainWindow::onSave);
     fileMenu->addSeparator();
-    fileMenu->addAction("&Salir", qApp, &QApplication::quit, QKeySequence::Quit);
+    fileMenu->addAction("&Salir", QKeySequence::Quit, qApp, &QApplication::quit);
 
     // Editar
     QMenu *editMenu = mb->addMenu("&Editar");
@@ -182,8 +182,8 @@ void MainWindow::setupMenuBar() {
     editMenu->addAction("Insertar columna a la &derecha",   this, &MainWindow::onAddColAfter);
     editMenu->addAction("E&liminar columna",                this, &MainWindow::onRemoveCol);
     editMenu->addSeparator();
-    editMenu->addAction("Eliminar &rango seleccionado", this, &MainWindow::onRemoveRange,
-                        QKeySequence::Delete);
+    editMenu->addAction("Eliminar &rango seleccionado", QKeySequence::Delete,
+                        this, &MainWindow::onRemoveRange);
 
     // Fórmulas
     QMenu *fmlMenu = mb->addMenu("&Fórmulas");
