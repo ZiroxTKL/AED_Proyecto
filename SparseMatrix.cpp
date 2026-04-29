@@ -1,217 +1,320 @@
 #include "SparseMatrix.h"
 #include <iostream>
 #include <iomanip>
-#include <fstream> 
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <stdexcept>
 
 using namespace std;
 
+// ─────────────────────────────────────────────────────────────
+//  Constructor / Destructor
+// ─────────────────────────────────────────────────────────────
+
 SparseMatrix::SparseMatrix(int rows, int cols) : maxRows(rows), maxCols(cols) {
-    rowHeaders = new Node*[rows];
-    colHeaders = new Node*[cols];
-    for (int i = 0; i < rows; ++i) rowHeaders[i] = nullptr;
-    for (int i = 0; i < cols; ++i) colHeaders[i] = nullptr;
+    rowHeaders = new Node*[rows]();   // () = zero-initialise
+    colHeaders = new Node*[cols]();
 }
 
 SparseMatrix::~SparseMatrix() {
     for (int i = 0; i < maxRows; ++i) {
         Node* curr = rowHeaders[i];
         while (curr) {
-            Node* temp = curr;
+            Node* tmp = curr;
             curr = curr->right;
-            delete temp;
+            delete tmp;
         }
     }
     delete[] rowHeaders;
     delete[] colHeaders;
 }
 
+// ─────────────────────────────────────────────────────────────
+//  Helpers de referencia de celda
+// ─────────────────────────────────────────────────────────────
+
+// Convierte "AA" -> 26, "A" -> 0, etc. (inversa de getCellRef)
+static int colLettersToIndex(const string& letters) {
+    int idx = 0;
+    for (char ch : letters) {
+        idx = idx * 26 + (toupper(ch) - 'A' + 1);
+    }
+    return idx - 1;
+}
+
+// Parsea una referencia de celda tipo "AB12" y devuelve (fila, col)
+// Devuelve false si el formato es inválido
+static bool parseCellRef(const string& ref, int& row, int& col) {
+    size_t i = 0;
+    while (i < ref.size() && isalpha(ref[i])) ++i;
+    if (i == 0 || i == ref.size()) return false;
+    try {
+        col = colLettersToIndex(ref.substr(0, i));
+        row = stoi(ref.substr(i)) - 1;
+    } catch (...) {
+        return false;
+    }
+    return (row >= 0 && col >= 0);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Cálculo de fórmulas
+// ─────────────────────────────────────────────────────────────
+
+// Evalúa una expresión de dos operandos: "REF op REF" o "NUM op REF", etc.
+// Soporta +  -  *  /
+// Retorna true si logró evaluar.
+bool SparseMatrix::evalFormula(const string& expr, double& result) {
+    // Buscar el operador más a la derecha (para respetar precedencia simple)
+    // Operadores soportados (en orden de menor a mayor precedencia al buscar)
+    // Buscamos de derecha a izquierda para manejar unarios negativos básicos
+    const string ops = "+-*/";
+    size_t opPos = string::npos;
+    char   opChar = 0;
+
+    // Recorrer de derecha a izquierda; saltar el '-' en pos 0 (unario)
+    for (int k = (int)expr.size() - 1; k > 0; --k) {
+        char c = expr[k];
+        if (ops.find(c) != string::npos) {
+            opPos  = (size_t)k;
+            opChar = c;
+            break;
+        }
+    }
+
+    if (opPos == string::npos) {
+        // Sin operador: puede ser un número o una referencia de celda
+        int r, c;
+        if (parseCellRef(expr, r, c)) {
+            result = getNumericValue(r, c);
+            return true;
+        }
+        try { result = stod(expr); return true; }
+        catch (...) { return false; }
+    }
+
+    string leftStr  = expr.substr(0, opPos);
+    string rightStr = expr.substr(opPos + 1);
+
+    double left = 0, right = 0;
+
+    // Evaluar operando izquierdo
+    int r, c;
+    if (parseCellRef(leftStr, r, c))  left = getNumericValue(r, c);
+    else { try { left  = stod(leftStr);  } catch (...) { return false; } }
+
+    // Evaluar operando derecho
+    if (parseCellRef(rightStr, r, c)) right = getNumericValue(r, c);
+    else { try { right = stod(rightStr); } catch (...) { return false; } }
+
+    switch (opChar) {
+        case '+': result = left + right; break;
+        case '-': result = left - right; break;
+        case '*': result = left * right; break;
+        case '/':
+            if (right == 0) { result = 0; return false; }
+            result = left / right;
+            break;
+        default: return false;
+    }
+    return true;
+}
+
 void SparseMatrix::updateCache(int r, int c) {
     Node* curr = rowHeaders[r];
     while (curr && curr->col < c) curr = curr->right;
-    
-    if (!curr || curr->col != c || curr->rawValue.empty() || curr->rawValue[0] != '=') {
-        return;
-    }
 
-    string formula = curr->rawValue;
-    formula = formula.substr(1); 
+    if (!curr || curr->col != c) return;
+    if (curr->rawValue.empty() || curr->rawValue[0] != '=') return;
 
-    size_t plusPos = formula.find('+');
-    if (plusPos != string::npos) {
-        string celda1 = formula.substr(0, plusPos);
-        string celda2 = formula.substr(plusPos + 1);
-
-        int c1_col = celda1[0] - 'A';
-        int c1_row = stoi(celda1.substr(1)) - 1;
-
-        int c2_col = celda2[0] - 'A';
-        int c2_row = stoi(celda2.substr(1)) - 1;
-
-        double val1 = getNumericValue(c1_row, c1_col);
-        double val2 = getNumericValue(c2_row, c2_col);
-
-        curr->cacheValue = val1 + val2;
-    }
+    string expr = curr->rawValue.substr(1);  // quitar '='
+    double val = 0;
+    evalFormula(expr, val);
+    curr->cacheValue = val;
 }
+
+// ─────────────────────────────────────────────────────────────
+//  Operaciones básicas
+// ─────────────────────────────────────────────────────────────
 
 void SparseMatrix::set(int r, int c, string val) {
     if (r < 0 || r >= maxRows || c < 0 || c >= maxCols) return;
 
-    if (val == "" || val == "0") {
+    // FIX: solo eliminamos si el valor está vacío; "0" es un valor válido
+    if (val.empty()) {
         remove(r, c);
         return;
     }
 
-    // Buscar posición en la Fila
-    Node* lastInRow = nullptr;
+    // Buscar posición en la fila
+    Node* lastInRow  = nullptr;
     Node** prevRight = &rowHeaders[r];
     while (*prevRight && (*prevRight)->col < c) {
         lastInRow = *prevRight;
         prevRight = &((*prevRight)->right);
     }
 
-    // Buscar posición en la Columna
+    // Buscar posición en la columna
     Node* lastInCol = nullptr;
-    Node** prevDown = &colHeaders[c];
+    Node** prevDown  = &colHeaders[c];
     while (*prevDown && (*prevDown)->row < r) {
         lastInCol = *prevDown;
-        prevDown = &((*prevDown)->down);
+        prevDown  = &((*prevDown)->down);
     }
 
-    // Verificar Nodo
     if (*prevRight && (*prevRight)->col == c) {
+        // Nodo ya existe: actualizar valor
         (*prevRight)->rawValue = val;
-        // Si se actualizó a una fórmula, recalculamos
-        if (val.length() > 0 && val[0] == '=') updateCache(r, c); 
+        if (!val.empty() && val[0] == '=') updateCache(r, c);
     } else {
+        // Crear nuevo nodo
         Node* newNode = new Node(r, c, val);
 
-        // Reorganizar Nodos (Horizontal)
         newNode->right = *prevRight;
-        newNode->left = lastInRow;
-        if (*prevRight) {
-            (*prevRight)->left = newNode;
-        }
+        newNode->left  = lastInRow;
+        if (*prevRight) (*prevRight)->left = newNode;
         *prevRight = newNode;
 
-        // Reorganizar Nodos (Vertical)
         newNode->down = *prevDown;
-        newNode->up = lastInCol;
-        if (*prevDown) {
-            (*prevDown)->up = newNode;
-        }
+        newNode->up   = lastInCol;
+        if (*prevDown) (*prevDown)->up = newNode;
         *prevDown = newNode;
-        
-        // Si se insertó una fórmula, calculamos su caché
-        if (val.length() > 0 && val[0] == '=') updateCache(r, c);
+
+        if (!val.empty() && val[0] == '=') updateCache(r, c);
     }
 }
 
 string SparseMatrix::get(int r, int c) {
     if (r < 0 || r >= maxRows || c < 0 || c >= maxCols) return "";
-
     Node* curr = rowHeaders[r];
     while (curr && curr->col < c) curr = curr->right;
-
-    if (curr && curr->col == c) return curr->rawValue;
-    return "";
+    return (curr && curr->col == c) ? curr->rawValue : "";
 }
 
 double SparseMatrix::getNumericValue(int r, int c) {
     if (r < 0 || r >= maxRows || c < 0 || c >= maxCols) return 0;
-    
     Node* curr = rowHeaders[r];
     while (curr && curr->col < c) curr = curr->right;
-
     if (curr && curr->col == c) {
-        if (!curr->rawValue.empty() && curr->rawValue[0] == '=') {
-            return curr->cacheValue; 
-        }
-        try {
-            return std::stod(curr->rawValue);
-        } catch (...) {
-            return 0; 
-        }
+        if (!curr->rawValue.empty() && curr->rawValue[0] == '=')
+            return curr->cacheValue;
+        try { return stod(curr->rawValue); }
+        catch (...) { return 0; }
     }
     return 0;
 }
+
+int SparseMatrix::getRows() const { return maxRows; }
+int SparseMatrix::getCols() const { return maxCols; }
 
 void SparseMatrix::remove(int r, int c) {
     if (r < 0 || r >= maxRows || c < 0 || c >= maxCols) return;
 
     Node** prevRight = &rowHeaders[r];
-    while (*prevRight && (*prevRight)->col < c) {
+    while (*prevRight && (*prevRight)->col < c)
         prevRight = &((*prevRight)->right);
-    }
 
     Node* target = *prevRight;
     if (!target || target->col != c) return;
 
     Node** prevDown = &colHeaders[c];
-    while (*prevDown && (*prevDown)->row < r) {
+    while (*prevDown && (*prevDown)->row < r)
         prevDown = &((*prevDown)->down);
-    }
 
-    // Desconectar fila
+    // Desconectar de fila
     *prevRight = target->right;
     if (target->right) target->right->left = target->left;
 
-    // Desconectar columna
+    // Desconectar de columna
     *prevDown = target->down;
     if (target->down) target->down->up = target->up;
 
     delete target;
 }
 
-// Guardar y cargar
+// ─────────────────────────────────────────────────────────────
+//  Persistencia
+// ─────────────────────────────────────────────────────────────
+
 void SparseMatrix::saveToFile(string filename) {
     ofstream file(filename);
     if (!file.is_open()) return;
-
     for (int i = 0; i < maxRows; ++i) {
         Node* curr = rowHeaders[i];
         while (curr) {
+            // Escapar comas dentro del valor con comillas simples si es necesario
             file << curr->row << "," << curr->col << "," << curr->rawValue << "\n";
             curr = curr->right;
         }
     }
-    file.close();
 }
 
 void SparseMatrix::loadFromFile(string filename) {
     ifstream file(filename);
     if (!file.is_open()) return;
 
-    // Limpiar matriz actual antes de cargar
-    for (int i = 0; i < maxRows; ++i) removeRow(i);
+    // Primera pasada: determinar dimensiones reales del archivo
+    int maxR = 0, maxC = 0;
+    vector<tuple<int,int,string>> entries;
 
     string line;
     while (getline(file, line)) {
+        if (line.empty()) continue;
         size_t p1 = line.find(',');
+        if (p1 == string::npos) continue;
         size_t p2 = line.find(',', p1 + 1);
-        int r = stoi(line.substr(0, p1));
-        int c = stoi(line.substr(p1 + 1, p2 - p1 - 1));
-        string val = line.substr(p2 + 1);
-        set(r, c, val);
+        if (p2 == string::npos) continue;
+        try {
+            int r   = stoi(line.substr(0, p1));
+            int c   = stoi(line.substr(p1 + 1, p2 - p1 - 1));
+            string v = line.substr(p2 + 1);
+            maxR = max(maxR, r + 1);
+            maxC = max(maxC, c + 1);
+            entries.emplace_back(r, c, v);
+        } catch (...) { continue; }
     }
-}  
 
-// Añadir y remover
+    // Limpiar matriz actual completamente
+    for (int i = 0; i < maxRows; ++i) {
+        Node* curr = rowHeaders[i];
+        while (curr) {
+            Node* tmp = curr->right;
+            delete curr;
+            curr = tmp;
+        }
+        rowHeaders[i] = nullptr;
+    }
+    delete[] rowHeaders;
+    delete[] colHeaders;
+
+    // Redimensionar para acomodar todos los datos del archivo
+    maxRows = max(maxRows, maxR);
+    maxCols = max(maxCols, maxC);
+
+    rowHeaders = new Node*[maxRows]();
+    colHeaders = new Node*[maxCols]();
+
+    // Segunda pasada: insertar datos
+    for (auto& [r, c, v] : entries)
+        set(r, c, v);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Insertar / eliminar filas y columnas
+// ─────────────────────────────────────────────────────────────
+
 void SparseMatrix::addRow(int atPos) {
     if (atPos < 0 || atPos > maxRows) return;
 
-    // Actualizar los índices internos de todos los nodos afectados
+    // Incrementar índice de fila en todos los nodos afectados
     for (int i = atPos; i < maxRows; ++i) {
         Node* curr = rowHeaders[i];
-        while (curr) {
-            curr->row++;
-            curr = curr->right;
-        }
+        while (curr) { curr->row++; curr = curr->right; }
     }
 
-    // Reasignar el array de cabeceras de fila
-    Node** newRowHeaders = new Node*[maxRows + 1];
-    for (int i = 0; i < atPos; ++i) newRowHeaders[i] = rowHeaders[i];
+    Node** newRowHeaders = new Node*[maxRows + 1]();
+    for (int i = 0; i < atPos;    ++i) newRowHeaders[i]     = rowHeaders[i];
     newRowHeaders[atPos] = nullptr;
     for (int i = atPos; i < maxRows; ++i) newRowHeaders[i + 1] = rowHeaders[i];
 
@@ -223,18 +326,13 @@ void SparseMatrix::addRow(int atPos) {
 void SparseMatrix::addColumn(int atPos) {
     if (atPos < 0 || atPos > maxCols) return;
 
-    // Actualizar índices de columna en todos los nodos afectados
     for (int i = atPos; i < maxCols; ++i) {
         Node* curr = colHeaders[i];
-        while (curr) {
-            curr->col++;
-            curr = curr->down;
-        }
+        while (curr) { curr->col++; curr = curr->down; }
     }
 
-    // Reasignar el array de cabeceras de columna
-    Node** newColHeaders = new Node*[maxCols + 1];
-    for (int i = 0; i < atPos; ++i) newColHeaders[i] = colHeaders[i];
+    Node** newColHeaders = new Node*[maxCols + 1]();
+    for (int i = 0; i < atPos;    ++i) newColHeaders[i]     = colHeaders[i];
     newColHeaders[atPos] = nullptr;
     for (int i = atPos; i < maxCols; ++i) newColHeaders[i + 1] = colHeaders[i];
 
@@ -245,44 +343,72 @@ void SparseMatrix::addColumn(int atPos) {
 
 void SparseMatrix::removeRow(int r) {
     if (r < 0 || r >= maxRows) return;
-    while (rowHeaders[r]) {
+
+    // Eliminar todos los nodos de la fila
+    while (rowHeaders[r])
         remove(r, rowHeaders[r]->col);
+
+    // Decrementar índices de filas posteriores
+    for (int i = r + 1; i < maxRows; ++i) {
+        Node* curr = rowHeaders[i];
+        while (curr) { curr->row--; curr = curr->right; }
     }
+
+    // Compactar array de cabeceras
+    Node** newRowHeaders = new Node*[maxRows - 1]();
+    for (int i = 0; i < r; ++i)           newRowHeaders[i]     = rowHeaders[i];
+    for (int i = r + 1; i < maxRows; ++i)  newRowHeaders[i - 1] = rowHeaders[i];
+
+    delete[] rowHeaders;
+    rowHeaders = newRowHeaders;
+    maxRows--;
 }
 
 void SparseMatrix::removeColumn(int c) {
     if (c < 0 || c >= maxCols) return;
-    while (colHeaders[c]) {
+
+    while (colHeaders[c])
         remove(colHeaders[c]->row, c);
+
+    for (int i = c + 1; i < maxCols; ++i) {
+        Node* curr = colHeaders[i];
+        while (curr) { curr->col--; curr = curr->down; }
     }
+
+    Node** newColHeaders = new Node*[maxCols - 1]();
+    for (int i = 0; i < c; ++i)           newColHeaders[i]     = colHeaders[i];
+    for (int i = c + 1; i < maxCols; ++i)  newColHeaders[i - 1] = colHeaders[i];
+
+    delete[] colHeaders;
+    colHeaders = newColHeaders;
+    maxCols--;
 }
 
 void SparseMatrix::removeRange(int r1, int c1, int r2, int c2) {
     for (int i = r1; i <= r2; ++i) {
         if (i < 0 || i >= maxRows) continue;
-        
         Node* curr = rowHeaders[i];
         while (curr) {
-             // Guardamos el siguiente antes de borrar
-            Node* nextNode = curr->right;
-            if (curr->col >= c1 && curr->col <= c2) {
+            Node* next = curr->right;
+            if (curr->col >= c1 && curr->col <= c2)
                 remove(i, curr->col);
-            }
-            curr = nextNode;
+            curr = next;
         }
     }
 }
 
-// Operaciones
+// ─────────────────────────────────────────────────────────────
+//  Operaciones de rango
+// ─────────────────────────────────────────────────────────────
+
 double SparseMatrix::sumRange(int r1, int c1, int r2, int c2) {
     double total = 0;
     for (int i = r1; i <= r2; ++i) {
         if (i < 0 || i >= maxRows) continue;
         Node* curr = rowHeaders[i];
         while (curr && curr->col <= c2) {
-            if (curr->col >= c1) {
+            if (curr->col >= c1)
                 total += getNumericValue(i, curr->col);
-            }
             curr = curr->right;
         }
     }
@@ -291,15 +417,12 @@ double SparseMatrix::sumRange(int r1, int c1, int r2, int c2) {
 
 double SparseMatrix::averageRange(int r1, int c1, int r2, int c2) {
     double total = 0;
-    int count = 0;
+    int    count = 0;
     for (int i = r1; i <= r2; ++i) {
         if (i < 0 || i >= maxRows) continue;
         Node* curr = rowHeaders[i];
         while (curr && curr->col <= c2) {
-            if (curr->col >= c1) {
-                total += getNumericValue(i, curr->col);
-                count++;
-            }
+            if (curr->col >= c1) { total += getNumericValue(i, curr->col); ++count; }
             curr = curr->right;
         }
     }
@@ -307,9 +430,8 @@ double SparseMatrix::averageRange(int r1, int c1, int r2, int c2) {
 }
 
 double SparseMatrix::maxInRange(int r1, int c1, int r2, int c2) {
-     // Valor muy pequeño
     double maxVal = -1e18;
-    bool found = false;
+    bool   found  = false;
     for (int i = r1; i <= r2; ++i) {
         if (i < 0 || i >= maxRows) continue;
         Node* curr = rowHeaders[i];
@@ -326,9 +448,8 @@ double SparseMatrix::maxInRange(int r1, int c1, int r2, int c2) {
 }
 
 double SparseMatrix::minInRange(int r1, int c1, int r2, int c2) {
-    // Valor muy grande
-    double minVal = 1e18; 
-    bool found = false;
+    double minVal = 1e18;
+    bool   found  = false;
     for (int i = r1; i <= r2; ++i) {
         if (i < 0 || i >= maxRows) continue;
         Node* curr = rowHeaders[i];
@@ -344,17 +465,21 @@ double SparseMatrix::minInRange(int r1, int c1, int r2, int c2) {
     return found ? minVal : 0;
 }
 
+// ─────────────────────────────────────────────────────────────
+//  Debug
+// ─────────────────────────────────────────────────────────────
+
 void SparseMatrix::display() {
     for (int i = 0; i < maxRows; ++i) {
         Node* curr = rowHeaders[i];
         for (int j = 0; j < maxCols; ++j) {
             if (curr && curr->col == j) {
-                cout << setw(8) << curr->rawValue << " ";
+                cout << setw(10) << curr->rawValue;
                 curr = curr->right;
             } else {
-                cout << setw(8) << "." << " ";
+                cout << setw(10) << ".";
             }
         }
-        cout << endl;
+        cout << "\n";
     }
 }
