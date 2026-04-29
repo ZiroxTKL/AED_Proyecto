@@ -20,6 +20,54 @@
 #include <cmath>
 
 // ─────────────────────────────────────────────────────────────
+//  Paleta de colores (estilo Excel 365)
+// ─────────────────────────────────────────────────────────────
+namespace ExcelTheme {
+    // Estructura
+    const char* HEADER_BG       = "#F2F2F2";   // cabeceras de fila/col
+    const char* HEADER_BORDER   = "#D0D0D0";
+    const char* HEADER_TEXT     = "#444444";
+    const char* HEADER_HOVER    = "#E6E6E6";
+    const char* HEADER_SELECTED = "#107C41";   // verde Excel al seleccionar
+    const char* HEADER_SEL_TEXT = "#FFFFFF";
+
+    // Celdas
+    const char* CELL_BG         = "#FFFFFF";
+    const char* CELL_GRID       = "#D0D0D0";
+    const char* CELL_TEXT       = "#212121";
+    const char* CELL_SEL_BG     = "#CDE8D8";   // selección verde pálido
+    const char* CELL_SEL_TEXT   = "#212121";
+
+    // Celdas con fórmula
+    const char* FORMULA_BG      = "#EEF4FF";   // azul muy tenue
+    const char* FORMULA_TEXT    = "#0D47A1";   // azul oscuro
+
+    // Barra de fórmulas
+    const char* FX_BAR_BG       = "#FFFFFF";
+    const char* FX_BAR_BORDER   = "#D0D0D0";
+    const char* FX_ICON_COLOR   = "#107C41";   // verde Excel
+    const char* FX_REF_BG       = "#F2F2F2";
+    const char* FX_REF_BORDER   = "#C0C0C0";
+
+    // Menú / Toolbar
+    const char* TOOLBAR_BG      = "#217346";   // verde Excel oscuro
+    const char* TOOLBAR_TEXT    = "#FFFFFF";
+    const char* TOOLBAR_HOVER   = "#185C37";
+    const char* TOOLBAR_PRESSED = "#0E3D25";
+    const char* MENU_BG         = "#FFFFFF";
+    const char* MENU_BORDER     = "#C8C8C8";
+    const char* MENU_SEL_BG     = "#107C41";
+    const char* MENU_SEL_TEXT   = "#FFFFFF";
+    const char* MENUBAR_BG      = "#217346";
+    const char* MENUBAR_TEXT    = "#FFFFFF";
+    const char* MENUBAR_HOVER   = "#185C37";
+
+    // Status bar
+    const char* STATUS_BG       = "#217346";
+    const char* STATUS_TEXT     = "#FFFFFF";
+}
+
+// ─────────────────────────────────────────────────────────────
 //  Constructor / Destructor
 // ─────────────────────────────────────────────────────────────
 
@@ -52,14 +100,20 @@ MainWindow::~MainWindow() {
 // ─────────────────────────────────────────────────────────────
 
 void MainWindow::setupUI() {
-    // Paleta de colores general
+    // Paleta global: fondo neutro, texto oscuro
     QPalette pal = QApplication::palette();
-    pal.setColor(QPalette::Window,      QColor("#F5F5F5"));
-    pal.setColor(QPalette::Base,        QColor("#FFFFFF"));
-    pal.setColor(QPalette::Highlight,   QColor("#1A73E8"));
+    pal.setColor(QPalette::Window,        QColor(ExcelTheme::CELL_BG));
+    pal.setColor(QPalette::WindowText,    QColor(ExcelTheme::CELL_TEXT));
+    pal.setColor(QPalette::Base,          QColor(ExcelTheme::CELL_BG));
+    pal.setColor(QPalette::Text,          QColor(ExcelTheme::CELL_TEXT));
+    pal.setColor(QPalette::Highlight,     QColor(ExcelTheme::CELL_SEL_BG));
+    pal.setColor(QPalette::HighlightedText, QColor(ExcelTheme::CELL_SEL_TEXT));
     QApplication::setPalette(pal);
 
-    // Widget central
+    // Fuente base
+    QFont appFont("Calibri", 11);
+    QApplication::setFont(appFont);
+
     QWidget *central = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(central);
     mainLayout->setSpacing(0);
@@ -68,32 +122,47 @@ void MainWindow::setupUI() {
     // ── Barra de fórmulas ──────────────────────────────────
     QWidget *fxBar = new QWidget();
     fxBar->setFixedHeight(34);
-    fxBar->setStyleSheet("background:#FFFFFF; border-bottom:1px solid #E0E0E0;");
+    fxBar->setStyleSheet(
+        QString("background:%1; border-bottom:1px solid %2;")
+            .arg(ExcelTheme::FX_BAR_BG)
+            .arg(ExcelTheme::FX_BAR_BORDER)
+    );
     QHBoxLayout *fxLayout = new QHBoxLayout(fxBar);
     fxLayout->setContentsMargins(6, 2, 6, 2);
     fxLayout->setSpacing(4);
 
     cellRefLabel = new QLabel("A1");
-    cellRefLabel->setFixedWidth(52);
+    cellRefLabel->setFixedWidth(56);
     cellRefLabel->setAlignment(Qt::AlignCenter);
     cellRefLabel->setStyleSheet(
-        "font-weight:bold; font-size:12px; color:#333;"
-        "border:1px solid #D0D0D0; border-radius:3px;"
-        "background:#F8F8F8; padding:2px 4px;"
+        QString("font-weight:bold; font-size:12px; color:%1;"
+                "border:1px solid %2; border-radius:2px;"
+                "background:%3; padding:2px 4px;")
+            .arg(ExcelTheme::CELL_TEXT)
+            .arg(ExcelTheme::FX_REF_BORDER)
+            .arg(ExcelTheme::FX_REF_BG)
     );
 
     QLabel *fxIcon = new QLabel("ƒx");
-    fxIcon->setFixedWidth(22);
+    fxIcon->setFixedWidth(26);
     fxIcon->setAlignment(Qt::AlignCenter);
-    fxIcon->setStyleSheet("color:#1A73E8; font-weight:bold; font-size:13px;");
+    fxIcon->setStyleSheet(
+        QString("color:%1; font-weight:bold; font-size:14px;")
+            .arg(ExcelTheme::FX_ICON_COLOR)
+    );
 
     formulaBar = new QLineEdit();
     formulaBar->setPlaceholderText("Ingresa un valor, texto o fórmula (=A1+B1) …");
     formulaBar->setStyleSheet(
-        "border:1px solid #D0D0D0; border-radius:3px;"
-        "padding:2px 6px; font-size:13px;"
-        "background:#FAFAFA;"
-        "selection-background-color:#BDD7FF;"
+        QString("border:1px solid %1; border-radius:2px;"
+                "padding:2px 6px; font-size:12px;"
+                "background:%2; color:%3;"
+                "selection-background-color:%4; selection-color:%5;")
+            .arg(ExcelTheme::FX_REF_BORDER)
+            .arg(ExcelTheme::FX_BAR_BG)
+            .arg(ExcelTheme::CELL_TEXT)
+            .arg(ExcelTheme::CELL_SEL_BG)
+            .arg(ExcelTheme::CELL_SEL_TEXT)
     );
     connect(formulaBar, &QLineEdit::returnPressed,
             this,       &MainWindow::onFormulaConfirmed);
@@ -108,38 +177,64 @@ void MainWindow::setupUI() {
     tableWidget->setEditTriggers(QAbstractItemView::DoubleClicked
                                | QAbstractItemView::AnyKeyPressed);
 
-    // Tamaño de celdas
     tableWidget->horizontalHeader()->setDefaultSectionSize(90);
     tableWidget->verticalHeader()->setDefaultSectionSize(22);
     tableWidget->horizontalHeader()->setMinimumSectionSize(30);
     tableWidget->verticalHeader()->setMinimumSectionSize(18);
 
-    tableWidget->setStyleSheet(R"(
+    // Resaltar la cabecera de la columna/fila seleccionada
+    tableWidget->horizontalHeader()->setHighlightSections(true);
+    tableWidget->verticalHeader()->setHighlightSections(true);
+
+    tableWidget->setStyleSheet(
+        QString(R"(
         QTableWidget {
-            gridline-color: #E0E0E0;
-            font-size: 13px;
-            selection-color: #000;
+            gridline-color: %1;
+            background-color: %2;
+            color: %3;
+            font-size: 12px;
+            border: none;
         }
         QTableWidget::item {
             padding: 0 4px;
+            color: %3;
+            background-color: %2;
         }
         QTableWidget::item:selected {
-            background-color: #BDD7FF;
-            color: #000;
+            background-color: %4;
+            color: %5;
         }
         QHeaderView::section {
-            background-color: #F1F3F4;
+            background-color: %6;
+            color: %7;
             border: 0px;
-            border-right: 1px solid #D8D8D8;
-            border-bottom: 1px solid #D8D8D8;
+            border-right: 1px solid %8;
+            border-bottom: 1px solid %8;
             font-size: 12px;
-            color: #555;
-            padding: 2px;
+            font-weight: 500;
+            padding: 2px 4px;
         }
         QHeaderView::section:hover {
-            background-color: #E8EAED;
+            background-color: %9;
         }
-    )");
+        QHeaderView::section:checked {
+            background-color: %10;
+            color: %11;
+            font-weight: bold;
+        }
+        )")
+        .arg(ExcelTheme::CELL_GRID)        // %1 gridline
+        .arg(ExcelTheme::CELL_BG)          // %2 cell bg
+        .arg(ExcelTheme::CELL_TEXT)        // %3 cell text
+        .arg(ExcelTheme::CELL_SEL_BG)      // %4 selected bg
+        .arg(ExcelTheme::CELL_SEL_TEXT)    // %5 selected text
+        .arg(ExcelTheme::HEADER_BG)        // %6 header bg
+        .arg(ExcelTheme::HEADER_TEXT)      // %7 header text
+        .arg(ExcelTheme::HEADER_BORDER)    // %8 header border
+        .arg(ExcelTheme::HEADER_HOVER)     // %9 header hover
+        .arg(ExcelTheme::HEADER_SELECTED)  // %10 selected header bg
+        .arg(ExcelTheme::HEADER_SEL_TEXT)  // %11 selected header text
+    );
 
     syncTableHeaders();
 
@@ -151,24 +246,44 @@ void MainWindow::setupUI() {
     mainLayout->addWidget(fxBar);
     mainLayout->addWidget(tableWidget);
 
-    setStatusBar(new QStatusBar(this));
+    // Status bar con fondo verde Excel
+    QStatusBar *sb = new QStatusBar(this);
+    sb->setStyleSheet(
+        QString("QStatusBar { background:%1; color:%2; font-size:11px; }"
+                "QStatusBar::item { border:none; }")
+            .arg(ExcelTheme::STATUS_BG)
+            .arg(ExcelTheme::STATUS_TEXT)
+    );
+    setStatusBar(sb);
     setCentralWidget(central);
 }
 
 void MainWindow::setupMenuBar() {
     QMenuBar *mb = menuBar();
     mb->setStyleSheet(
-        "QMenuBar { background:#F8F8F8; border-bottom:1px solid #E0E0E0; }"
-        "QMenuBar::item:selected { background:#E8EAED; border-radius:3px; }"
-        "QMenu { background:#FFFFFF; border:1px solid #D0D0D0; }"
-        "QMenu::item:selected { background:#1A73E8; color:#FFF; }"
+        QString("QMenuBar { background:%1; color:%2; font-size:12px; }"
+                "QMenuBar::item { padding:4px 10px; color:%2; background:transparent; }"
+                "QMenuBar::item:selected { background:%3; border-radius:3px; }"
+                "QMenuBar::item:pressed { background:%3; }"
+                "QMenu { background:%4; color:%5; border:1px solid %6; font-size:12px; }"
+                "QMenu::item { padding:5px 24px 5px 24px; color:%5; }"
+                "QMenu::item:selected { background:%7; color:%8; }"
+                "QMenu::separator { height:1px; background:%6; margin:3px 10px; }")
+            .arg(ExcelTheme::MENUBAR_BG)       // %1 menubar bg
+            .arg(ExcelTheme::MENUBAR_TEXT)     // %2 menubar text
+            .arg(ExcelTheme::MENUBAR_HOVER)    // %3 menubar hover
+            .arg(ExcelTheme::MENU_BG)          // %4 menu bg
+            .arg(ExcelTheme::CELL_TEXT)        // %5 menu text  ← texto OSCURO visible
+            .arg(ExcelTheme::MENU_BORDER)      // %6 menu border
+            .arg(ExcelTheme::MENU_SEL_BG)      // %7 menu sel bg
+            .arg(ExcelTheme::MENU_SEL_TEXT)    // %8 menu sel text
     );
 
     // Archivo
     QMenu *fileMenu = mb->addMenu("&Archivo");
-    fileMenu->addAction(QIcon(), "&Nuevo",   QKeySequence::New,  this, &MainWindow::onNew);
-    fileMenu->addAction(QIcon(), "&Abrir…",  QKeySequence::Open, this, &MainWindow::onLoad);
-    fileMenu->addAction(QIcon(), "&Guardar…",QKeySequence::Save, this, &MainWindow::onSave);
+    fileMenu->addAction("&Nuevo",    QKeySequence::New,  this, &MainWindow::onNew);
+    fileMenu->addAction("&Abrir…",   QKeySequence::Open, this, &MainWindow::onLoad);
+    fileMenu->addAction("&Guardar…", QKeySequence::Save, this, &MainWindow::onSave);
     fileMenu->addSeparator();
     fileMenu->addAction("&Salir", QKeySequence::Quit, qApp, &QApplication::quit);
 
@@ -182,8 +297,8 @@ void MainWindow::setupMenuBar() {
     editMenu->addAction("Insertar columna a la &derecha",   this, &MainWindow::onAddColAfter);
     editMenu->addAction("E&liminar columna",                this, &MainWindow::onRemoveCol);
     editMenu->addSeparator();
-    editMenu->addAction("Eliminar &rango seleccionado", QKeySequence::Delete,
-                        this, &MainWindow::onRemoveRange);
+    editMenu->addAction("Eliminar &rango seleccionado",
+                        QKeySequence::Delete, this, &MainWindow::onRemoveRange);
 
     // Fórmulas
     QMenu *fmlMenu = mb->addMenu("&Fórmulas");
@@ -196,12 +311,21 @@ void MainWindow::setupMenuBar() {
 void MainWindow::setupToolBar() {
     QToolBar *tb = addToolBar("Principal");
     tb->setMovable(false);
-    tb->setIconSize(QSize(16, 16));
+    tb->setIconSize(QSize(14, 14));
     tb->setStyleSheet(
-        "QToolBar { background:#F8F8F8; border-bottom:1px solid #E0E0E0; spacing:2px; }"
-        "QToolButton { padding:3px 8px; border-radius:3px; font-size:12px; }"
-        "QToolButton:hover { background:#E8EAED; }"
-        "QToolButton:pressed { background:#D0D0D0; }"
+        QString("QToolBar { background:%1; border:none;"
+                " border-bottom:1px solid %2; spacing:1px; padding:2px 4px; }"
+                "QToolButton { padding:3px 10px; border-radius:2px; font-size:12px;"
+                " color:%3; background:transparent; }"
+                "QToolButton:hover { background:%4; }"
+                "QToolButton:pressed { background:%5; }"
+                "QToolBar::separator { width:1px; background:%6; margin:4px 3px; }")
+            .arg(ExcelTheme::TOOLBAR_BG)      // %1 toolbar bg
+            .arg(ExcelTheme::TOOLBAR_HOVER)   // %2 bottom border
+            .arg(ExcelTheme::TOOLBAR_TEXT)    // %3 button text (blanco — visible sobre verde)
+            .arg(ExcelTheme::TOOLBAR_HOVER)   // %4 hover
+            .arg(ExcelTheme::TOOLBAR_PRESSED) // %5 pressed
+            .arg("#2D9A5D")                   // %6 separator color
     );
 
     auto addBtn = [&](const QString &text, auto slot, const QString &tip = "") {
@@ -214,17 +338,17 @@ void MainWindow::setupToolBar() {
     addBtn("💾 Guardar", &MainWindow::onSave,        "Guardar como CSV (Ctrl+S)");
     tb->addSeparator();
 
-    addBtn("➕↑ Fila",  &MainWindow::onAddRowBefore, "Insertar fila antes de la selección");
-    addBtn("➕↓ Fila",  &MainWindow::onAddRowAfter,  "Insertar fila después de la selección");
-    addBtn("🗑 Fila",   &MainWindow::onRemoveRow,    "Eliminar fila seleccionada");
+    addBtn("＋↑ Fila",  &MainWindow::onAddRowBefore, "Insertar fila antes de la selección");
+    addBtn("＋↓ Fila",  &MainWindow::onAddRowAfter,  "Insertar fila después de la selección");
+    addBtn("✕ Fila",    &MainWindow::onRemoveRow,    "Eliminar fila seleccionada");
     tb->addSeparator();
 
-    addBtn("➕← Col",  &MainWindow::onAddColBefore, "Insertar columna a la izquierda");
-    addBtn("➕→ Col",  &MainWindow::onAddColAfter,  "Insertar columna a la derecha");
-    addBtn("🗑 Col",   &MainWindow::onRemoveCol,    "Eliminar columna seleccionada");
+    addBtn("＋← Col",  &MainWindow::onAddColBefore, "Insertar columna a la izquierda");
+    addBtn("＋→ Col",  &MainWindow::onAddColAfter,  "Insertar columna a la derecha");
+    addBtn("✕ Col",    &MainWindow::onRemoveCol,    "Eliminar columna seleccionada");
     tb->addSeparator();
 
-    addBtn("🗑 Rango",  &MainWindow::onRemoveRange,  "Eliminar contenido del rango seleccionado");
+    addBtn("✕ Rango",   &MainWindow::onRemoveRange,  "Eliminar contenido del rango seleccionado");
     tb->addSeparator();
 
     addBtn("∑ Suma",    &MainWindow::onSumRange,     "SUMA sobre el rango seleccionado");
@@ -238,7 +362,6 @@ void MainWindow::setupToolBar() {
 // ─────────────────────────────────────────────────────────────
 
 QString MainWindow::getCellRef(int row, int col) {
-    // Soporta columnas más allá de Z (AA, AB, …)
     QString colStr;
     int tmp = col;
     do {
@@ -252,10 +375,8 @@ QString MainWindow::formatDisplayValue(const std::string &raw, int r, int c) {
     if (raw.empty()) return "";
     if (raw[0] == '=') {
         double val = matrix->getNumericValue(r, c);
-        // Muestra entero si no tiene decimales
         if (val == std::floor(val) && std::abs(val) < 1e14)
             return QString::number(static_cast<long long>(val));
-        // Hasta 6 cifras significativas
         std::ostringstream oss;
         oss << val;
         return QString::fromStdString(oss.str());
@@ -264,15 +385,38 @@ QString MainWindow::formatDisplayValue(const std::string &raw, int r, int c) {
 }
 
 void MainWindow::syncTableHeaders() {
-    // Cabeceras de columna (A, B, C …)
     QStringList colHdrs;
-    for (int c = 0; c < numCols; ++c) colHdrs << getCellRef(0, c).left(getCellRef(0, c).size() - 1);
+    for (int c = 0; c < numCols; ++c) {
+        QString ref = getCellRef(0, c);
+        colHdrs << ref.left(ref.size() - 1);
+    }
     tableWidget->setHorizontalHeaderLabels(colHdrs);
 
-    // Cabeceras de fila (1, 2, 3 …)
     QStringList rowHdrs;
-    for (int r = 0; r < numRows; ++r) rowHdrs << QString::number(r + 1);
+    for (int r = 0; r < numRows; ++r)
+        rowHdrs << QString::number(r + 1);
     tableWidget->setVerticalHeaderLabels(rowHdrs);
+}
+
+// Aplica color de fórmula o restablece el color normal a una celda
+void MainWindow::applyCellStyle(QTableWidgetItem *item, const std::string &raw) {
+    if (!item) return;
+    bool isFormula = (!raw.empty() && raw[0] == '=');
+    bool isNumeric = (!raw.empty() && (std::isdigit(raw[0]) || raw[0] == '-'));
+
+    if (isFormula) {
+        item->setBackground(QColor(ExcelTheme::FORMULA_BG));
+        item->setForeground(QColor(ExcelTheme::FORMULA_TEXT));
+        item->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    } else if (isNumeric) {
+        item->setBackground(QColor(ExcelTheme::CELL_BG));
+        item->setForeground(QColor(ExcelTheme::CELL_TEXT));
+        item->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    } else {
+        item->setBackground(QColor(ExcelTheme::CELL_BG));
+        item->setForeground(QColor(ExcelTheme::CELL_TEXT));
+        item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    }
 }
 
 void MainWindow::refreshTable() {
@@ -287,11 +431,7 @@ void MainWindow::refreshTable() {
             std::string raw = matrix->get(r, c);
             if (!raw.empty()) {
                 QTableWidgetItem *item = new QTableWidgetItem(formatDisplayValue(raw, r, c));
-                // Alineación: texto a la izquierda, números/fórmulas a la derecha
-                if (!raw.empty() && (raw[0] == '=' || std::isdigit(raw[0]) || raw[0] == '-'))
-                    item->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-                else
-                    item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+                applyCellStyle(item, raw);
                 tableWidget->setItem(r, c, item);
             }
         }
@@ -311,10 +451,7 @@ void MainWindow::refreshCell(int r, int c) {
             tableWidget->setItem(r, c, item);
         }
         item->setText(formatDisplayValue(raw, r, c));
-        if (raw[0] == '=' || std::isdigit(raw[0]) || raw[0] == '-')
-            item->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        else
-            item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        applyCellStyle(item, raw);
     }
     blockTableSignals = false;
 }
@@ -357,11 +494,9 @@ void MainWindow::onCellChanged(int row, int col) {
 
     matrix->set(row, col, val);
 
-    // Actualiza la barra de fórmulas si es la celda actual
     if (row == currentRow && col == currentCol)
         formulaBar->setText(QString::fromStdString(matrix->get(row, col)));
 
-    // Muestra el valor calculado (no el raw) en la celda
     refreshCell(row, col);
 }
 
@@ -380,68 +515,54 @@ void MainWindow::onFormulaConfirmed() {
 void MainWindow::onAddRowBefore() {
     int r1, c1, r2, c2;
     getSelectionRange(r1, c1, r2, c2);
-
     matrix->addRow(r1);
     numRows++;
-
     blockTableSignals = true;
     tableWidget->insertRow(r1);
     syncTableHeaders();
     blockTableSignals = false;
-
     showStatus(QString("Fila insertada antes de la fila %1.").arg(r1 + 1));
 }
 
 void MainWindow::onAddRowAfter() {
     int r1, c1, r2, c2;
     getSelectionRange(r1, c1, r2, c2);
-
     matrix->addRow(r2 + 1);
     numRows++;
-
     blockTableSignals = true;
     tableWidget->insertRow(r2 + 1);
     syncTableHeaders();
     blockTableSignals = false;
-
     showStatus(QString("Fila insertada después de la fila %1.").arg(r2 + 1));
 }
 
 void MainWindow::onAddColBefore() {
     int r1, c1, r2, c2;
     getSelectionRange(r1, c1, r2, c2);
-
     matrix->addColumn(c1);
     numCols++;
-
     blockTableSignals = true;
     tableWidget->insertColumn(c1);
     syncTableHeaders();
     blockTableSignals = false;
-
     showStatus(QString("Columna insertada antes de %1.").arg(getCellRef(0, c1).left(1)));
 }
 
 void MainWindow::onAddColAfter() {
     int r1, c1, r2, c2;
     getSelectionRange(r1, c1, r2, c2);
-
     matrix->addColumn(c2 + 1);
     numCols++;
-
     blockTableSignals = true;
     tableWidget->insertColumn(c2 + 1);
     syncTableHeaders();
     blockTableSignals = false;
-
     showStatus(QString("Columna insertada después de %1.").arg(getCellRef(0, c2).left(1)));
 }
 
 void MainWindow::onRemoveRow() {
     int r1, c1, r2, c2;
     getSelectionRange(r1, c1, r2, c2);
-
-    // Eliminar de abajo hacia arriba para preservar índices
     for (int r = r2; r >= r1; --r) {
         matrix->removeRow(r);
         blockTableSignals = true;
@@ -456,7 +577,6 @@ void MainWindow::onRemoveRow() {
 void MainWindow::onRemoveCol() {
     int r1, c1, r2, c2;
     getSelectionRange(r1, c1, r2, c2);
-
     for (int c = c2; c >= c1; --c) {
         matrix->removeColumn(c);
         blockTableSignals = true;
@@ -465,21 +585,18 @@ void MainWindow::onRemoveCol() {
         numCols--;
     }
     syncTableHeaders();
-    showStatus(QString("Columna(s) eliminada(s)."));
+    showStatus("Columna(s) eliminada(s).");
 }
 
 void MainWindow::onRemoveRange() {
     int r1, c1, r2, c2;
     getSelectionRange(r1, c1, r2, c2);
-
     matrix->removeRange(r1, c1, r2, c2);
-
     blockTableSignals = true;
     for (int r = r1; r <= r2; ++r)
         for (int c = c1; c <= c2; ++c)
             delete tableWidget->takeItem(r, c);
     blockTableSignals = false;
-
     showStatus(QString("Rango %1:%2 borrado.")
         .arg(getCellRef(r1, c1)).arg(getCellRef(r2, c2)));
 }
@@ -559,6 +676,8 @@ void MainWindow::onLoad() {
     );
     if (path.isEmpty()) return;
     matrix->loadFromFile(path.toStdString());
+    numRows = matrix->getRows();
+    numCols = matrix->getCols();
     refreshTable();
     showStatus(QString("Cargado: %1").arg(path));
 }

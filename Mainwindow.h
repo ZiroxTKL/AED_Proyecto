@@ -1,7 +1,3 @@
-//
-// Created by Usuario on 24/04/2026.
-//
-
 #ifndef AED_PROYECTO_MAINWINDOW_H
 #define AED_PROYECTO_MAINWINDOW_H
 
@@ -15,6 +11,7 @@
 #include <QPushButton>
 #include <QToolBar>
 #include <QMenuBar>
+#include <string>
 #include "SparseMatrix.h"
 
 class MainWindow : public QMainWindow {
@@ -58,29 +55,29 @@ private:
 
     // ── Datos ─────────────────────────────────────────────
     SparseMatrix *matrix;
-    bool          blockTableSignals; // evita recursión en cellChanged
+    bool          blockTableSignals;
     int           currentRow;
     int           currentCol;
-    int           numRows;           // filas actuales de la matriz
-    int           numCols;           // columnas actuales de la matriz
+    int           numRows;
+    int           numCols;
 
     static const int INIT_ROWS = 50;
-    static const int INIT_COLS = 26; // A-Z
+    static const int INIT_COLS = 26;
 
     // ── Helpers ───────────────────────────────────────────
     void setupUI();
     void setupMenuBar();
     void setupToolBar();
 
-    void refreshTable();             // redibuja toda la tabla desde la matriz
-    void refreshCell(int r, int c);  // redibuja una sola celda
+    void refreshTable();
+    void refreshCell(int r, int c);
+    void applyCellStyle(QTableWidgetItem *item, const std::string &raw); // ← añadida
 
-    QString  getCellRef(int row, int col);               // "A1", "B3", etc.
-    QString  formatDisplayValue(const std::string &raw, int r, int c);
-    bool     getSelectionRange(int &r1, int &c1, int &r2, int &c2);
-    void     showStatus(const QString &msg, int ms = 3000);
-    void     syncTableHeaders();     // actualiza cabeceras de fila y columna
+    QString getCellRef(int row, int col);
+    QString formatDisplayValue(const std::string &raw, int r, int c);
+    bool    getSelectionRange(int &r1, int &c1, int &r2, int &c2);
+    void    showStatus(const QString &msg, int ms = 3000);
+    void    syncTableHeaders();
 };
-
 
 #endif //AED_PROYECTO_MAINWINDOW_H
