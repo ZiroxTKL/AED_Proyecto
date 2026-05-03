@@ -1,0 +1,5 @@
+C:/Users/Jhonatan/Desktop/cursos UTEC/AED/Proyecto20261/AED_Proyecto/build/CMakeFiles/AED_Proyecto.dir
+C:/Users/Jhonatan/Desktop/cursos UTEC/AED/Proyecto20261/AED_Proyecto/build/CMakeFiles/edit_cache.dir
+C:/Users/Jhonatan/Desktop/cursos UTEC/AED/Proyecto20261/AED_Proyecto/build/CMakeFiles/rebuild_cache.dir
+C:/Users/Jhonatan/Desktop/cursos UTEC/AED/Proyecto20261/AED_Proyecto/build/CMakeFiles/AED_Proyecto_autogen_timestamp_deps.dir
+C:/Users/Jhonatan/Desktop/cursos UTEC/AED/Proyecto20261/AED_Proyecto/build/CMakeFiles/AED_Proyecto_autogen.dir
