@@ -266,29 +266,53 @@ double SparseMatrix::getNumericValue(int r, int c) {
 int SparseMatrix::getRows() const { return maxRows; }
 int SparseMatrix::getCols() const { return maxCols; }
 
+void SparseMatrix::expandRows(int newMax) {
+    if (newMax <= maxRows) return;
+    Node** newHeaders = new Node*[newMax]();
+    for (int i = 0; i < maxRows; ++i)
+        newHeaders[i] = rowHeaders[i];
+    delete[] rowHeaders;
+    rowHeaders = newHeaders;
+    maxRows = newMax;
+}
+
+void SparseMatrix::expandCols(int newMax) {
+    if (newMax <= maxCols) return;
+    Node** newHeaders = new Node*[newMax]();
+    for (int i = 0; i < maxCols; ++i)
+        newHeaders[i] = colHeaders[i];
+    delete[] colHeaders;
+    colHeaders = newHeaders;
+    maxCols = newMax;
+}
+
 void SparseMatrix::remove(int r, int c) {
     if (r < 0 || r >= maxRows || c < 0 || c >= maxCols) return;
 
+    // Recorrer la fila r hasta encontrar el nodo anterior al de columna c
     Node** prevRight = &rowHeaders[r];
     while (*prevRight && (*prevRight)->col < c)
         prevRight = &((*prevRight)->right);
 
     Node* target = *prevRight;
-    if (!target || target->col != c) return;
+    if (!target || target->col != c) return; // el nodo no existe, nada que hacer
 
+    // Recorrer la columna c hasta encontrar el nodo anterior al de fila r
     Node** prevDown = &colHeaders[c];
     while (*prevDown && (*prevDown)->row < r)
         prevDown = &((*prevDown)->down);
 
-    // Desconectar de fila
+    // Desconectar de la fila: el nodo previo en la fila ahora apunta al siguiente de target,
+    // y si existe un siguiente, su puntero left se actualiza para saltarse a target
     *prevRight = target->right;
     if (target->right) target->right->left = target->left;
 
-    // Desconectar de columna
+    // Desconectar de la columna: el nodo previo en la columna ahora apunta al siguiente de target,
+    // y si existe un siguiente, su puntero up se actualiza para saltarse a target
     *prevDown = target->down;
     if (target->down) target->down->up = target->up;
 
-    delete target;
+    delete target; // liberar memoria del nodo eliminado
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -485,7 +509,20 @@ double SparseMatrix::averageRange(int r1, int c1, int r2, int c2) {
         if (i < 0 || i >= maxRows) continue;
         Node* curr = rowHeaders[i];
         while (curr && curr->col <= c2) {
-            if (curr->col >= c1) { total += getNumericValue(i, curr->col); ++count; }
+            if (curr->col >= c1) {
+                // Ignorar celdas de texto puro (no numéricas ni fórmulas)
+                const std::string& raw = curr->rawValue;
+                bool isFormula = !raw.empty() && raw[0] == '=';
+                bool isNumber  = false;
+                if (!isFormula) {
+                    try { std::stod(raw); isNumber = true; }
+                    catch (...) {}
+                }
+                if (isFormula || isNumber) {
+                    total += getNumericValue(i, curr->col);
+                    ++count;
+                }
+            }
             curr = curr->right;
         }
     }
@@ -500,9 +537,19 @@ double SparseMatrix::maxInRange(int r1, int c1, int r2, int c2) {
         Node* curr = rowHeaders[i];
         while (curr && curr->col <= c2) {
             if (curr->col >= c1) {
-                double val = getNumericValue(i, curr->col);
-                if (val > maxVal) maxVal = val;
-                found = true;
+                // Ignorar celdas de texto puro (no numéricas ni fórmulas)
+                const std::string& raw = curr->rawValue;
+                bool isFormula = !raw.empty() && raw[0] == '=';
+                bool isNumber  = false;
+                if (!isFormula) {
+                    try { std::stod(raw); isNumber = true; }
+                    catch (...) {}
+                }
+                if (isFormula || isNumber) {
+                    double val = getNumericValue(i, curr->col);
+                    if (val > maxVal) maxVal = val;
+                    found = true;
+                }
             }
             curr = curr->right;
         }
@@ -518,9 +565,19 @@ double SparseMatrix::minInRange(int r1, int c1, int r2, int c2) {
         Node* curr = rowHeaders[i];
         while (curr && curr->col <= c2) {
             if (curr->col >= c1) {
-                double val = getNumericValue(i, curr->col);
-                if (val < minVal) minVal = val;
-                found = true;
+                // Ignorar celdas de texto puro (no numéricas ni fórmulas)
+                const std::string& raw = curr->rawValue;
+                bool isFormula = !raw.empty() && raw[0] == '=';
+                bool isNumber  = false;
+                if (!isFormula) {
+                    try { std::stod(raw); isNumber = true; }
+                    catch (...) {}
+                }
+                if (isFormula || isNumber) {
+                    double val = getNumericValue(i, curr->col);
+                    if (val < minVal) minVal = val;
+                    found = true;
+                }
             }
             curr = curr->right;
         }

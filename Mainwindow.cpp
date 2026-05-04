@@ -484,6 +484,28 @@ void MainWindow::onCellClicked(int row, int col) {
     cellRefLabel->setText(getCellRef(row, col));
     std::string raw = matrix->get(row, col);
     formulaBar->setText(QString::fromStdString(raw));
+
+    // Expansión dinámica al acercarse al borde
+    bool expanded = false;
+    if (row >= numRows - 5) {
+        int newRows = numRows + 50;
+        matrix->expandRows(newRows);
+        blockTableSignals = true;
+        tableWidget->setRowCount(newRows);
+        blockTableSignals = false;
+        numRows = newRows;
+        expanded = true;
+    }
+    if (col >= numCols - 3) {
+        int newCols = numCols + 10;
+        matrix->expandCols(newCols);
+        blockTableSignals = true;
+        tableWidget->setColumnCount(newCols);
+        blockTableSignals = false;
+        numCols = newCols;
+        expanded = true;
+    }
+    if (expanded) syncTableHeaders();
 }
 
 void MainWindow::onCellChanged(int row, int col) {

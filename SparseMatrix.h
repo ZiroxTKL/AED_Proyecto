@@ -42,6 +42,8 @@ public:
     void removeRow(int r);
     void removeColumn(int c);
     void removeRange(int r1, int c1, int r2, int c2);
+    void expandRows(int newMax);
+    void expandCols(int newMax);
 
     // Operaciones de rango
     double sumRange    (int r1, int c1, int r2, int c2);
