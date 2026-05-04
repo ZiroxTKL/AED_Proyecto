@@ -59,66 +59,124 @@ static bool parseCellRef(const string& ref, int& row, int& col) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Cálculo de fórmulas
+//  Parser recursivo descendente para fórmulas
 // ─────────────────────────────────────────────────────────────
 
-// Evalúa una expresión de dos operandos: "REF op REF" o "NUM op REF", etc.
-// Soporta +  -  *  /
-// Retorna true si logró evaluar.
-bool SparseMatrix::evalFormula(const string& expr, double& result) {
-    // Buscar el operador más a la derecha (para respetar precedencia simple)
-    // Operadores soportados (en orden de menor a mayor precedencia al buscar)
-    // Buscamos de derecha a izquierda para manejar unarios negativos básicos
-    const string ops = "+-*/";
-    size_t opPos = string::npos;
-    char   opChar = 0;
+struct ParseState {
+    const std::string& expr;
+    size_t pos;
+    SparseMatrix* matrix;
+};
 
-    // Recorrer de derecha a izquierda; saltar el '-' en pos 0 (unario)
-    for (int k = (int)expr.size() - 1; k > 0; --k) {
-        char c = expr[k];
-        if (ops.find(c) != string::npos) {
-            opPos  = (size_t)k;
-            opChar = c;
-            break;
-        }
+static void skipSpaces(ParseState& s) {
+    while (s.pos < s.expr.size() && s.expr[s.pos] == ' ')
+        s.pos++;
+}
+
+// Declaraciones adelantadas
+static bool parseExpr  (ParseState& s, double& result);
+static bool parseTerm  (ParseState& s, double& result);
+static bool parseFactor(ParseState& s, double& result);
+
+// Factor: número | referencia de celda | (expresión) | -factor
+static bool parseFactor(ParseState& s, double& result) {
+    skipSpaces(s);
+    if (s.pos >= s.expr.size()) return false;
+
+    // Unario negativo
+    if (s.expr[s.pos] == '-') {
+        s.pos++;
+        double val;
+        if (!parseFactor(s, val)) return false;
+        result = -val;
+        return true;
     }
 
-    if (opPos == string::npos) {
-        // Sin operador: puede ser un número o una referencia de celda
-        int r, c;
-        if (parseCellRef(expr, r, c)) {
-            result = getNumericValue(r, c);
+    // Expresión entre paréntesis
+    if (s.expr[s.pos] == '(') {
+        s.pos++;
+        if (!parseExpr(s, result)) return false;
+        skipSpaces(s);
+        if (s.pos >= s.expr.size() || s.expr[s.pos] != ')') return false;
+        s.pos++;
+        return true;
+    }
+
+    size_t start = s.pos;
+
+    // Referencia de celda: empieza con letra(s) seguidas de dígitos  (ej: A1, BC42)
+    if (isalpha(s.expr[s.pos])) {
+        while (s.pos < s.expr.size() && isalpha(s.expr[s.pos])) s.pos++;
+        if (s.pos < s.expr.size() && isdigit(s.expr[s.pos])) {
+            while (s.pos < s.expr.size() && isdigit(s.expr[s.pos])) s.pos++;
+            std::string ref = s.expr.substr(start, s.pos - start);
+            int r, c;
+            if (parseCellRef(ref, r, c)) {
+                result = s.matrix->getNumericValue(r, c);
+                return true;
+            }
+        }
+        return false; // letras sin número → no es referencia válida
+    }
+
+    // Número (entero o decimal)
+    if (isdigit(s.expr[s.pos]) || s.expr[s.pos] == '.') {
+        while (s.pos < s.expr.size() &&
+               (isdigit(s.expr[s.pos]) || s.expr[s.pos] == '.'))
+            s.pos++;
+        try {
+            result = std::stod(s.expr.substr(start, s.pos - start));
             return true;
-        }
-        try { result = stod(expr); return true; }
-        catch (...) { return false; }
+        } catch (...) { return false; }
     }
 
-    string leftStr  = expr.substr(0, opPos);
-    string rightStr = expr.substr(opPos + 1);
+    return false;
+}
 
-    double left = 0, right = 0;
+// Término: factor (* factor | / factor)*
+static bool parseTerm(ParseState& s, double& result) {
+    if (!parseFactor(s, result)) return false;
 
-    // Evaluar operando izquierdo
-    int r, c;
-    if (parseCellRef(leftStr, r, c))  left = getNumericValue(r, c);
-    else { try { left  = stod(leftStr);  } catch (...) { return false; } }
-
-    // Evaluar operando derecho
-    if (parseCellRef(rightStr, r, c)) right = getNumericValue(r, c);
-    else { try { right = stod(rightStr); } catch (...) { return false; } }
-
-    switch (opChar) {
-        case '+': result = left + right; break;
-        case '-': result = left - right; break;
-        case '*': result = left * right; break;
-        case '/':
-            if (right == 0) { result = 0; return false; }
-            result = left / right;
-            break;
-        default: return false;
+    while (true) {
+        skipSpaces(s);
+        if (s.pos >= s.expr.size()) break;
+        char op = s.expr[s.pos];
+        if (op != '*' && op != '/') break;
+        s.pos++;
+        double right;
+        if (!parseFactor(s, right)) return false;
+        if (op == '*') result *= right;
+        else {
+            if (right == 0.0) return false; // división por cero
+            result /= right;
+        }
     }
     return true;
+}
+
+// Expresión: término (+ término | - término)*
+static bool parseExpr(ParseState& s, double& result) {
+    if (!parseTerm(s, result)) return false;
+
+    while (true) {
+        skipSpaces(s);
+        if (s.pos >= s.expr.size()) break;
+        char op = s.expr[s.pos];
+        if (op != '+' && op != '-') break;
+        s.pos++;
+        double right;
+        if (!parseTerm(s, right)) return false;
+        if (op == '+') result += right;
+        else           result -= right;
+    }
+    return true;
+}
+
+bool SparseMatrix::evalFormula(const std::string& expr, double& result) {
+    ParseState s{expr, 0, this};
+    if (!parseExpr(s, result)) return false;
+    skipSpaces(s);
+    return s.pos == s.expr.size(); // debe consumir TODA la expresión
 }
 
 void SparseMatrix::updateCache(int r, int c) {
@@ -181,8 +239,8 @@ void SparseMatrix::set(int r, int c, string val) {
         if (*prevDown) (*prevDown)->up = newNode;
         *prevDown = newNode;
 
-        if (!val.empty() && val[0] == '=') updateCache(r, c);
     }
+    recalculateAll();
 }
 
 string SparseMatrix::get(int r, int c) {
@@ -298,6 +356,11 @@ void SparseMatrix::loadFromFile(string filename) {
     // Segunda pasada: insertar datos
     for (auto& [r, c, v] : entries)
         set(r, c, v);
+}
+
+Node* SparseMatrix::getRowHeader(int r) const {
+    if (r < 0 || r >= maxRows) return nullptr;
+    return rowHeaders[r];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -463,6 +526,17 @@ double SparseMatrix::minInRange(int r1, int c1, int r2, int c2) {
         }
     }
     return found ? minVal : 0;
+}
+
+void SparseMatrix::recalculateAll() {
+    for (int i = 0; i < maxRows; ++i) {
+        Node* curr = rowHeaders[i];
+        while (curr) {
+            if (!curr->rawValue.empty() && curr->rawValue[0] == '=')
+                updateCache(curr->row, curr->col);
+            curr = curr->right;
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────

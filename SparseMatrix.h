@@ -48,6 +48,7 @@ public:
     double averageRange(int r1, int c1, int r2, int c2);
     double maxInRange  (int r1, int c1, int r2, int c2);
     double minInRange  (int r1, int c1, int r2, int c2);
+    Node* getRowHeader(int r) const;
 
     // Debug
     void display();
@@ -59,5 +60,6 @@ private:
     Node** colHeaders;
 
     void updateCache(int r, int c);
+    void recalculateAll();
     bool evalFormula(const std::string& expr, double& result);
 };

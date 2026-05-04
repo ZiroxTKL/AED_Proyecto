@@ -13,7 +13,6 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 add_executable(AED_Proyecto
         main.cpp
-        Node.h
         SparseMatrix.cpp
         SparseMatrix.h
         Mainwindow.cpp

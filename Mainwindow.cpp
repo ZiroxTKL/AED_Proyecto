@@ -488,26 +488,23 @@ void MainWindow::onCellClicked(int row, int col) {
 
 void MainWindow::onCellChanged(int row, int col) {
     if (blockTableSignals) return;
-
     QTableWidgetItem *item = tableWidget->item(row, col);
     std::string val = item ? item->text().toStdString() : "";
-
     matrix->set(row, col, val);
-
     if (row == currentRow && col == currentCol)
         formulaBar->setText(QString::fromStdString(matrix->get(row, col)));
-
     refreshCell(row, col);
+    refreshFormulaCells(); // ← actualiza solo las celdas con fórmulas
 }
 
 void MainWindow::onFormulaConfirmed() {
     QString val = formulaBar->text();
     matrix->set(currentRow, currentCol, val.toStdString());
     refreshCell(currentRow, currentCol);
+    refreshFormulaCells(); // ← actualiza solo las celdas con fórmulas
     tableWidget->setCurrentCell(currentRow, currentCol);
     showStatus(QString("Celda %1 actualizada.").arg(getCellRef(currentRow, currentCol)));
 }
-
 // ─────────────────────────────────────────────────────────────
 //  Slots — Filas y Columnas
 // ─────────────────────────────────────────────────────────────
@@ -680,4 +677,23 @@ void MainWindow::onLoad() {
     numCols = matrix->getCols();
     refreshTable();
     showStatus(QString("Cargado: %1").arg(path));
+}
+
+void MainWindow::refreshFormulaCells() {
+    blockTableSignals = true;
+    for (int r = 0; r < matrix->getRows(); ++r) {
+        Node* curr = matrix->getRowHeader(r); // solo nodos con contenido
+        while (curr) {
+            if (!curr->rawValue.empty() && curr->rawValue[0] == '=') {
+                QTableWidgetItem *item = tableWidget->item(curr->row, curr->col);
+                if (!item) {
+                    item = new QTableWidgetItem();
+                    tableWidget->setItem(curr->row, curr->col, item);
+                }
+                item->setText(formatDisplayValue(curr->rawValue, curr->row, curr->col));
+            }
+            curr = curr->right;
+        }
+    }
+    blockTableSignals = false;
 }

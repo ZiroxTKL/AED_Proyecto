@@ -61,7 +61,7 @@ private:
     int           numRows;
     int           numCols;
 
-    static const int INIT_ROWS = 50;
+    static const int INIT_ROWS = 100;
     static const int INIT_COLS = 26;
 
     // ── Helpers ───────────────────────────────────────────
@@ -69,6 +69,7 @@ private:
     void setupMenuBar();
     void setupToolBar();
 
+    void refreshFormulaCells();
     void refreshTable();
     void refreshCell(int r, int c);
     void applyCellStyle(QTableWidgetItem *item, const std::string &raw); // ← añadida
