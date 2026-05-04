@@ -63,8 +63,6 @@ En una hoja de 100×26 = 2600 celdas con solo 50 valores ingresados, la matriz d
 
 ---
 
----
-
 ## Instalación de CMake
 
 1. Descargar e instalar Cmake de https://cmake.org/download/
@@ -85,7 +83,7 @@ C:\Qt\Tools\Ninja
 ### 1. Agregar CMake al PATH
 
 ```
-https://cmake.org/download/
+C:\Program Files\CMake\bin
 ```
 ### 2. Configurar el kit de CMake
 
