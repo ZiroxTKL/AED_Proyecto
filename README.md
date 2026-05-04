@@ -63,6 +63,13 @@ En una hoja de 100×26 = 2600 celdas con solo 50 valores ingresados, la matriz d
 
 ---
 
+---
+
+## Instalación de CMake
+
+1. Descargar e instalar Cmake de https://cmake.org/download/
+
+---
 ## Compilación en VS Code
 
 ### 1. Agregar Qt y Ninja al PATH
@@ -75,6 +82,11 @@ C:\Qt\Tools\mingw1310_64\bin
 C:\Qt\Tools\Ninja
 ```
 
+### 1. Agregar CMake al PATH
+
+```
+https://cmake.org/download/
+```
 ### 2. Configurar el kit de CMake
 
 `Ctrl + Shift + P` → `CMake: Edit User-Local CMake Kits`
