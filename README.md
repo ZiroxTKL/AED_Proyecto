@@ -1,51 +1,14 @@
 # Hoja de Cálculo — Matriz Dispersa
 
 **Curso:** Algoritmos y Estructura de Datos  
-**Proyecto Nro. 1**  
-**Lenguaje:** C++17  
-**Interfaz:** Qt 6 (Widgets)
+**Hito 1**  
+**Lenguaje:** C++ 17  
+**Interfaz:** Qt
 
 ---
-
-## Descripción
-
-Aplicación de hoja de cálculo simple que utiliza una **matriz dispersa implementada con listas enlazadas cruzadas** como estructura principal de almacenamiento. Solo las celdas con contenido ocupan memoria; las celdas vacías no crean ningún nodo.
-
----
-
-## Estructura de datos: Lista enlazada cruzada
-
-Cada celda con contenido es un `Node` con los siguientes campos:
-
-```
-┌─────────────────────────────────┐
-│  row, col     → coordenadas     │
-│  rawValue     → valor o fórmula │
-│  cacheValue   → resultado de =  │
-│  left / right → lista de fila   │
-│  up   / down  → lista de columna│
-└─────────────────────────────────┘
-```
-
-Se mantienen dos arreglos de punteros cabecera: `rowHeaders[r]` apunta al primer nodo de la fila `r`, y `colHeaders[c]` apunta al primer nodo de la columna `c`. La lista es **doblemente enlazada** en ambas direcciones, lo que permite eliminaciones eficientes sin recorrer desde la cabecera.
-
-### Justificación frente a matriz densa
-
-| Criterio | Matriz densa | Matriz dispersa (este proyecto) |
-|---|---|---|
-| Memoria | O(n·m) siempre | O(k) donde k = celdas ocupadas |
-| Insertar celda | O(1) | O(k_fila + k_col) |
-| Eliminar celda | O(1) | O(k_fila + k_col) |
-| Eliminar fila | O(m) | O(k_fila) |
-| Suma de rango | O((r2−r1)·(c2−c1)) | O(nodos en rango) |
-
-En una hoja de 100×26 = 2600 celdas con solo 50 valores ingresados, la matriz densa asigna memoria para las 2600 posiciones mientras la dispersa solo usa 50 nodos. La ventaja crece con el tamaño de la hoja.
-
----
-
 ## Requisitos
 
-- **Qt 6.x** con módulo `Qt Widgets`  
+- **Qt 6.11.0** o superior
 - **CMake 3.16** o superior  
 - **MinGW 13** (Windows) o `g++ 11+` (Linux/macOS)
 
@@ -80,17 +43,17 @@ C:\Qt\Tools\mingw1310_64\bin
 C:\Qt\Tools\Ninja
 ```
 
-### 1. Agregar CMake al PATH
+### 2. Agregar CMake al PATH
 
 ```
 C:\Program Files\CMake\bin
 ```
 
-### 2. Configurar el generador
+### 3. Configurar el generador
 
 `Ctrl + ,` → buscar `CMake: Generator` → escribir `MinGW Makefiles`
 
-### 3. Configurar el entorno de CMake
+### 4. Configurar el entorno de CMake
 
 `Ctrl + ,` → buscar `cmake.configureEnvironment` → agregar ítem:
 
@@ -98,11 +61,43 @@ C:\Program Files\CMake\bin
 |---|---|
 | `PATH` | `C:\Qt\Tools\mingw1310_64\bin;${env:PATH}` |
 
-### 4. Compilar y ejecutar
+### 5. Compilar y ejecutar
 
 ```
 Ctrl + Shift + P → CMake: Build        (o F7)
 Ctrl + Shift + P → CMake: Run          (o Shift + F5)
+```
+
+---
+
+## Compilación en CLion
+
+### 1. Agregar Qt y Ninja al PATH
+
+En Variables de entorno del sistema, agregar:
+
+```
+C:\Qt\6.x.x\mingw_64\bin
+C:\Qt\Tools\mingw1310_64\bin
+C:\Qt\Tools\Ninja
+```
+
+### 2. Agregar CMake al PATH
+
+```
+C:\Program Files\CMake\bin
+```
+
+### 3. Añadir archivos a CLion
+
+Crear un Nuevo Proyecto en CLion
+Añadir el codigo fuente .cpp, .h y CMakeList.txt al Proyecto
+
+### 5. Compilar y ejecutar
+
+```
+CLion: Build        (Icono de Martillo al lado de Run)
+CLion: Run          (Icono Triangular en la barra Superior Derecha)
 ```
 
 ---
@@ -132,8 +127,6 @@ Las fórmulas comienzan con `=` y soportan:
 | Números literales | `=A1*2.5` |
 | Signo negativo | `=-A1` |
 
-Las celdas con fórmula se muestran en **azul** y se recalculan automáticamente al modificar cualquier celda referenciada.
-
 ### Operaciones sobre filas y columnas
 
 Disponibles en el menú **Editar** y en la barra de herramientas:
@@ -148,9 +141,8 @@ Disponibles en el menú **Editar** y en la barra de herramientas:
 
 ### Operaciones de agregación
 
-1. **Seleccionar un rango** de celdas (clic y arrastrar)
-2. Ir al menú **Fórmulas** o usar la barra de herramientas
-3. Elegir la operación deseada
+1. Ir al menú **Fórmulas** o usar la barra de herramientas
+2. Elegir la operación deseada
 
 | Operación | Menú / Botón | Comportamiento con texto |
 |---|---|---|
@@ -178,7 +170,7 @@ El resultado se muestra en un cuadro de diálogo con el rango seleccionado, por 
 | Eliminar fila o columna vacía | Se ejecuta sin error |
 | Agregar texto en una celda | Se almacena como texto, no afecta agregaciones numéricas |
 | SUMA / PROMEDIO / MÁX / MÍN sobre rango sin números | Retorna 0 sin error |
-| División por cero en fórmula | La fórmula muestra 0 sin crash |
+| División por cero en fórmula | La fórmula muestra #ERROR sin crash |
 | Referencia a celda vacía en fórmula | Se trata como 0 |
 
 ---
@@ -201,39 +193,3 @@ El resultado se muestra en un cuadro de diálogo con el rango seleccionado, por 
 - `main.cpp` solo inicializa la aplicación Qt.
 
 ---
-
-## Análisis de complejidad
-
-### Operaciones sobre nodos
-
-| Operación | Complejidad temporal | Descripción |
-|---|---|---|
-| `set(r, c, val)` — insertar | O(k_fila + k_col) | Recorre la fila y la columna para encontrar la posición |
-| `set(r, c, val)` — modificar | O(k_fila) | El nodo ya existe, solo actualiza el valor |
-| `get(r, c)` | O(k_fila) | Recorre la fila r hasta la columna c |
-| `remove(r, c)` | O(k_fila + k_col) | Busca el nodo previo en fila y en columna |
-| `removeRow(r)` | O(k_fila · k_col_avg) | Llama a `remove()` por cada nodo de la fila |
-| `removeColumn(c)` | O(k_col · k_fila_avg) | Llama a `remove()` por cada nodo de la columna |
-| `removeRange(r1,c1,r2,c2)` | O(nodos en rango) | Itera solo los nodos existentes en el rango |
-
-Donde `k` representa el número de elementos en una fila o columna, siempre menor o igual que el total de nodos `n`. En el peor caso (hoja completamente llena) estas operaciones se acercan a O(n), pero en una hoja dispersa típica `k << n`.
-
-### Operaciones de agregación
-
-| Operación | Complejidad temporal |
-|---|---|
-| `sumRange` | O(nodos en rango) |
-| `averageRange` | O(nodos en rango) |
-| `maxInRange` / `minInRange` | O(nodos en rango) |
-
-Las cuatro recorren solo los nodos que existen dentro del rango, no las celdas vacías.
-
-### Complejidad espacial
-
-| Estructura | Espacio |
-|---|---|
-| Nodos de datos | O(k) donde k = celdas con contenido |
-| Arreglos de cabeceras | O(n + m) donde n = filas, m = columnas |
-| **Total** | **O(k + n + m)** |
-
-Comparado con una matriz densa que requiere O(n·m) independientemente de cuántas celdas estén ocupadas, la estructura dispersa es significativamente más eficiente en memoria para hojas con baja densidad de datos.
