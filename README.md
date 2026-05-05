@@ -1,5 +1,14 @@
 # Hoja de Cálculo — Matriz Dispersa
 
+---
+Integrantes:
+
+Leonardo Martinez Aquino - 202410148
+Miguel Luis Paucar Barrios - 202410276
+Jhonatan Eder Ortega Huaman - 202410141
+
+---
+
 **Curso:** Algoritmos y Estructura de Datos  
 **Hito 1**  
 **Lenguaje:** C++ 17  
