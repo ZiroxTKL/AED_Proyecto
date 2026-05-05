@@ -63,6 +63,11 @@ En una hoja de 100×26 = 2600 celdas con solo 50 valores ingresados, la matriz d
 
 ---
 
+## Instalación de CMake
+
+1. Descargar e instalar Cmake de https://cmake.org/download/
+
+---
 ## Compilación en VS Code
 
 ### 1. Agregar Qt y Ninja al PATH
@@ -75,32 +80,17 @@ C:\Qt\Tools\mingw1310_64\bin
 C:\Qt\Tools\Ninja
 ```
 
-### 2. Configurar el kit de CMake
+### 1. Agregar CMake al PATH
 
-`Ctrl + Shift + P` → `CMake: Edit User-Local CMake Kits`
-
-Reemplazar el contenido con:
-
-```json
-[
-  {
-    "name": "Qt MinGW Manual",
-    "compilers": {
-      "C":   "C:/Qt/Tools/mingw1310_64/bin/gcc.exe",
-      "CXX": "C:/Qt/Tools/mingw1310_64/bin/g++.exe"
-    },
-    "preferredGenerator": {
-      "name": "MinGW Makefiles"
-    }
-  }
-]
+```
+C:\Program Files\CMake\bin
 ```
 
-### 3. Configurar el generador
+### 2. Configurar el generador
 
 `Ctrl + ,` → buscar `CMake: Generator` → escribir `MinGW Makefiles`
 
-### 4. Configurar el entorno de CMake
+### 3. Configurar el entorno de CMake
 
 `Ctrl + ,` → buscar `cmake.configureEnvironment` → agregar ítem:
 
@@ -108,7 +98,7 @@ Reemplazar el contenido con:
 |---|---|
 | `PATH` | `C:\Qt\Tools\mingw1310_64\bin;${env:PATH}` |
 
-### 5. Compilar y ejecutar
+### 4. Compilar y ejecutar
 
 ```
 Ctrl + Shift + P → CMake: Build        (o F7)
