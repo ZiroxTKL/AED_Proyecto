@@ -17,8 +17,6 @@ add_executable(AED_Proyecto
         SparseMatrix.h
         Mainwindow.cpp
         Mainwindow.h
-        SparseMatrix.h
-        SparseMatrix.h
 )
 
 target_link_libraries(AED_Proyecto Qt6::Widgets)
