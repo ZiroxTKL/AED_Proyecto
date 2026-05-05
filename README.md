@@ -85,32 +85,12 @@ C:\Qt\Tools\Ninja
 ```
 C:\Program Files\CMake\bin
 ```
-### 2. Configurar el kit de CMake
 
-`Ctrl + Shift + P` → `CMake: Edit User-Local CMake Kits`
-
-Reemplazar el contenido con:
-
-```json
-[
-  {
-    "name": "Qt MinGW Manual",
-    "compilers": {
-      "C":   "C:/Qt/Tools/mingw1310_64/bin/gcc.exe",
-      "CXX": "C:/Qt/Tools/mingw1310_64/bin/g++.exe"
-    },
-    "preferredGenerator": {
-      "name": "MinGW Makefiles"
-    }
-  }
-]
-```
-
-### 3. Configurar el generador
+### 2. Configurar el generador
 
 `Ctrl + ,` → buscar `CMake: Generator` → escribir `MinGW Makefiles`
 
-### 4. Configurar el entorno de CMake
+### 3. Configurar el entorno de CMake
 
 `Ctrl + ,` → buscar `cmake.configureEnvironment` → agregar ítem:
 
@@ -118,7 +98,7 @@ Reemplazar el contenido con:
 |---|---|
 | `PATH` | `C:\Qt\Tools\mingw1310_64\bin;${env:PATH}` |
 
-### 5. Compilar y ejecutar
+### 4. Compilar y ejecutar
 
 ```
 Ctrl + Shift + P → CMake: Build        (o F7)
