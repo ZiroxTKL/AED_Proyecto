@@ -23,7 +23,6 @@
 //  Paleta de colores (estilo Excel 365)
 // ─────────────────────────────────────────────────────────────
 namespace ExcelTheme {
-    // Estructura
     const char* HEADER_BG       = "#F2F2F2";   // cabeceras de fila/col
     const char* HEADER_BORDER   = "#D0D0D0";
     const char* HEADER_TEXT     = "#444444";

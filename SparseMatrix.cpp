@@ -13,7 +13,7 @@ using namespace std;
 // ─────────────────────────────────────────────────────────────
 
 SparseMatrix::SparseMatrix(int rows, int cols) : maxRows(rows), maxCols(cols) {
-    rowHeaders = new Node*[rows]();   // () = zero-initialise
+    rowHeaders = new Node*[rows]();
     colHeaders = new Node*[cols]();
 }
 
@@ -116,7 +116,7 @@ static bool parseFactor(ParseState& s, double& result) {
                 return true;
             }
         }
-        return false; // letras sin número → no es referencia válida
+        return false;
     }
 
     // Número (entero o decimal)
@@ -133,7 +133,7 @@ static bool parseFactor(ParseState& s, double& result) {
     return false;
 }
 
-// Término: factor (* factor | / factor)*
+// Término: factor (* factor | / factor)
 static bool parseTerm(ParseState& s, double& result) {
     if (!parseFactor(s, result)) return false;
 
@@ -154,7 +154,7 @@ static bool parseTerm(ParseState& s, double& result) {
     return true;
 }
 
-// Expresión: término (+ término | - término)*
+// Expresión: término (+ término | - término)
 static bool parseExpr(ParseState& s, double& result) {
     if (!parseTerm(s, result)) return false;
 
@@ -176,8 +176,10 @@ bool SparseMatrix::evalFormula(const std::string& expr, double& result) {
     ParseState s{expr, 0, this};
     if (!parseExpr(s, result)) return false;
     skipSpaces(s);
-    return s.pos == s.expr.size(); // debe consumir TODA la expresión
+    return s.pos == s.expr.size();
 }
+
+// Recalcula el valor cacheado de una celda con fórmula (si la hay)
 
 void SparseMatrix::updateCache(int r, int c) {
     Node* curr = rowHeaders[r];
@@ -199,9 +201,9 @@ void SparseMatrix::updateCache(int r, int c) {
 void SparseMatrix::set(int r, int c, string val) {
     if (r < 0 || r >= maxRows || c < 0 || c >= maxCols) return;
 
-    // FIX: solo eliminamos si el valor está vacío; "0" es un valor válido
     if (val.empty()) {
         remove(r, c);
+        recalculateAll();
         return;
     }
 
@@ -243,12 +245,16 @@ void SparseMatrix::set(int r, int c, string val) {
     recalculateAll();
 }
 
+// Obtener valor sin procesar (sin evaluar fórmulas)
+
 string SparseMatrix::get(int r, int c) {
     if (r < 0 || r >= maxRows || c < 0 || c >= maxCols) return "";
     Node* curr = rowHeaders[r];
     while (curr && curr->col < c) curr = curr->right;
     return (curr && curr->col == c) ? curr->rawValue : "";
 }
+
+// Obtener valor numérico: si es fórmula, devuelve el resultado evaluado; si es número, devuelve su valor; si es texto o vacío, devuelve 0
 
 double SparseMatrix::getNumericValue(int r, int c) {
     if (r < 0 || r >= maxRows || c < 0 || c >= maxCols) return 0;
@@ -258,13 +264,19 @@ double SparseMatrix::getNumericValue(int r, int c) {
         if (!curr->rawValue.empty() && curr->rawValue[0] == '=')
             return curr->cacheValue;
         try { return stod(curr->rawValue); }
-        catch (...) { return 0; }
+        catch (...) {
+            return 0; 
+        }
     }
     return 0;
 }
 
 int SparseMatrix::getRows() const { return maxRows; }
 int SparseMatrix::getCols() const { return maxCols; }
+
+// ─────────────────────────────────────────────────────────────
+//  Expansión dinámica
+// ─────────────────────────────────────────────────────────────
 
 void SparseMatrix::expandRows(int newMax) {
     if (newMax <= maxRows) return;
@@ -312,7 +324,7 @@ void SparseMatrix::remove(int r, int c) {
     *prevDown = target->down;
     if (target->down) target->down->up = target->up;
 
-    delete target; // liberar memoria del nodo eliminado
+    delete target;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -382,6 +394,10 @@ void SparseMatrix::loadFromFile(string filename) {
         set(r, c, v);
 }
 
+// ─────────────────────────────────────────────────────────────
+//  Acceso a la cabecera de la fila (para iterar sobre una fila)
+// ─────────────────────────────────────────────────────────────
+
 Node* SparseMatrix::getRowHeader(int r) const {
     if (r < 0 || r >= maxRows) return nullptr;
     return rowHeaders[r];
@@ -394,7 +410,6 @@ Node* SparseMatrix::getRowHeader(int r) const {
 void SparseMatrix::addRow(int atPos) {
     if (atPos < 0 || atPos > maxRows) return;
 
-    // Incrementar índice de fila en todos los nodos afectados
     for (int i = atPos; i < maxRows; ++i) {
         Node* curr = rowHeaders[i];
         while (curr) { curr->row++; curr = curr->right; }
@@ -493,9 +508,18 @@ double SparseMatrix::sumRange(int r1, int c1, int r2, int c2) {
     for (int i = r1; i <= r2; ++i) {
         if (i < 0 || i >= maxRows) continue;
         Node* curr = rowHeaders[i];
+
+        while (curr && curr->col < c1)
+            curr = curr->right;
+
         while (curr && curr->col <= c2) {
-            if (curr->col >= c1)
-                total += getNumericValue(i, curr->col);
+            const std::string& raw = curr->rawValue;
+            if (!raw.empty() && raw[0] == '=') {
+                total += curr->cacheValue;         
+            } else {
+                try { total += std::stod(raw); }
+                catch (...) {}
+            }
             curr = curr->right;
         }
     }
@@ -510,7 +534,7 @@ double SparseMatrix::averageRange(int r1, int c1, int r2, int c2) {
         Node* curr = rowHeaders[i];
         while (curr && curr->col <= c2) {
             if (curr->col >= c1) {
-                // Ignorar celdas de texto puro (no numéricas ni fórmulas)
+                // Ignorar celdas de texto puro
                 const std::string& raw = curr->rawValue;
                 bool isFormula = !raw.empty() && raw[0] == '=';
                 bool isNumber  = false;

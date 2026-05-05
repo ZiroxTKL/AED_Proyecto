@@ -3,6 +3,8 @@
 #include <vector>
 #include <tuple>
 
+// Nodo para cada celda no vacía
+
 struct Node {
     int row, col;
     std::string rawValue;
@@ -17,6 +19,8 @@ struct Node {
         : row(r), col(c), rawValue(v) {}
 };
 
+// Matriz dispersa con soporte para fórmulas básicas y guardado en CSV
+;
 class SparseMatrix {
 public:
     SparseMatrix(int rows, int cols);
