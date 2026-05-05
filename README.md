@@ -3,9 +3,9 @@
 ---
 Integrantes:
 
-Leonardo Martinez Aquino - 202410148
-Miguel Luis Paucar Barrios - 202410276
-Jhonatan Eder Ortega Huaman - 202410141
+- Leonardo Martinez Aquino - 202410148
+- Miguel Luis Paucar Barrios - 202410276
+- Jhonatan Eder Ortega Huaman - 202410141
 
 ---
 
